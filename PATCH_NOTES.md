@@ -6,6 +6,32 @@ Jogue em **https://docao.mvalentim.dev**
 
 ## Próxima versão
 
+- A mala de figurinos agora abre e recebe a câmera, revelando um provador com forro verde e prévia 3D das skins. Fechar Mala ou Esc retorna à vitrine, com suporte a movimento reduzido.
+- Trocar Visual virou uma mala de figurinos 3D apoiada na quina da caixa, com alça, fechos e inscrição pintada. A frente da mala abre a seleção de skins.
+- Durante o mergulho no Arsenal, chão e paisagem agora têm profundidade e paralaxe. O cenário muda de enquadramento junto da câmera e retorna ao sair da caixa.
+- O Arsenal agora abre a caixa: Docão sai da tampa, as dobradiças giram e a câmera entra para mostrar as armas em bandejas de madeira. Fechar ou Esc faz o caminho inverso, com suporte a movimento reduzido.
+- O Docão fica sobre uma caixa de armas 3D, com tábuas chanfradas, ferragens e estojo. A caixa tem uma leve rotação para mostrar profundidade, madeira quente com veios e lascas próximos ao assoalho e sombra de contato. A inscrição Arsenal é tinta gasta na superfície 3D, com a mesma luz e perspectiva da madeira. O painel da partida e a placa de visual se alinham à base dela.
+
+- O botão Trocar do mapa ficou maior. As placas Arsenal e Trocar Visual ganharam bordas de madeira recortadas e irregulares.
+
+- Jogar tem mais destaque que a ação online, que usa um verde-oliva mais discreto, mantendo o mesmo tamanho. O separador do título ganhou traço de tinta irregular e o painel ficou mais compacto.
+
+- Os botões Jogar e Juntar a Porcada agora ficam lado a lado, em tamanho compacto. A borda da placa tem pequenas lascas e um contorno irregular.
+
+- A comanda ganhou fundo de tábuas claras e moldura de madeira escura no estilo cartoon. O campo de nome segue o mesmo visual e tipografia dos seletores.
+
+- A moldura da comanda agora parece madeira pintada, com encaixes, cantos irregulares e pequenos pregos no estilo cartoon.
+
+- A chama de Bora pra Chapa agora dança como fogo aceso, com movimento suave e respeito à preferência de movimento reduzido.
+
+- A comanda ganhou um selo suíno circular e perdeu a frase abaixo do título. As ações Juntar a Porcada e Trocar Visual usam contraste claro sobre escuro.
+
+- A comanda acompanha a logo cartoon: lettering nos títulos e botões, prendedor ilustrado, moldura com relevo simples e campos com acabamento mais limpo.
+
+- As placas Arsenal e Trocar Visual usam o lettering da logo, com letras creme e fundo verde escuro nas ações secundárias, para melhorar a leitura. As balas e a camiseta ganharam relevo, e o texto do arsenal tem mais folga junto às ferragens.
+
+- Nova logo em placa de madeira ilustrada, com letras em relevo e fundo transparente. O acabamento segue um estilo cartoon, com contornos limpos e textura simplificada.
+
 - Os campos da comanda agora usam etiquetas impressas, papel claro e setas pintadas. Os ajustes de mira ganharam marcadores de tampinha e valores visíveis.
 
 - A fazendinha do menu agora tem cenário próprio ao entardecer, luz quente no Docão e um palco de madeira. A comanda ganhou acabamento de papel, carimbo suíno, opções lado a lado e placas com ferragens.

@@ -71,12 +71,26 @@
 <div id="menu" class="overlay">
   <div class="panel menu-panel">
     <header class="menu-header">
-      <div class="menu-logo"><h1>DOCÃO <span>SHOOTER</span></h1><p class="sub">TIROTEIO NA FAZENDINHA CHEERS</p></div>
+      <div class="menu-logo"><h1><img src="./assets/menu/logo-madeira-cartoon.png" alt="Docão Shooter — Tiroteio na Fazendinha Cheers" width="1774" height="887" fetchpriority="high" decoding="async"></h1></div>
     </header>
+    <div class="ticket-board">
     <button type="button" id="menuBack" class="ticket-back" hidden>← VOLTAR À PARTIDA</button>
     <div class="menu-content">
       <section id="menu-match" aria-label="Preparar partida" tabindex="0">
-        <div class="section-heading"><span class="ticket-stamp" aria-hidden="true"><svg viewBox="0 0 56 32"><path d="M11 12 8 3l13 5q13-4 24 6l6-1v9l-6 1-3 8h-6l-2-6H20l-2 6h-6l-1-9q-8 0-7-6t7-4Z"/><circle cx="42" cy="14" r="1.5" fill="#f0dfb9"/></svg>100%<br>SUÍNO</span><h2><svg class="chapa-flame" viewBox="0 0 32 44" aria-hidden="true"><path d="M16 1c3 13 12 12 10 25 9-9 7 17-10 17C-1 43-4 29 6 17c-1 8 4 10 4 10C5 17 15 15 16 1Z"/></svg>BORA PRA CHAPA</h2><p>Escolha o campo. O resto é pururuca.</p></div>
+        <div class="section-heading"><span class="ticket-stamp" aria-hidden="true"><svg viewBox="0 0 96 96">
+          <circle cx="48" cy="48" r="43" fill="none" stroke="currentColor" stroke-width="3"/>
+          <circle cx="48" cy="48" r="37" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 4"/>
+          <path d="m33 24-3-10 13 7m12 0 12-7-3 11" fill="currentColor"/>
+          <ellipse cx="48" cy="30" rx="20" ry="15" fill="currentColor"/>
+          <ellipse cx="48" cy="34" rx="11" ry="7" fill="#f6e4bd"/>
+          <circle cx="44" cy="34" r="2" fill="currentColor"/><circle cx="52" cy="34" r="2" fill="currentColor"/>
+          <circle cx="39" cy="26" r="1.8" fill="#f6e4bd"/><circle cx="57" cy="26" r="1.8" fill="#f6e4bd"/>
+          <text x="48" y="62" text-anchor="middle" fill="currentColor" font-family="Arial Black,Arial,sans-serif" font-size="19" font-weight="900">100%</text>
+          <text x="48" y="77" text-anchor="middle" fill="currentColor" font-family="Trebuchet MS,Arial,sans-serif" font-size="13" font-weight="900" letter-spacing="1">SUÍNO</text>
+        </svg></span><h2><svg class="chapa-flame" viewBox="0 0 32 44" aria-hidden="true">
+          <path class="flame-body" d="M16 1c3 13 12 12 10 25 9-9 7 17-10 17C-1 43-4 29 6 17c-1 8 4 10 4 10C5 17 15 15 16 1Z"/>
+          <path class="flame-heart" d="M17 23c0 6 6 8 5 13-1 7-12 7-13 0-1-4 3-7 4-10 0 5 3 6 3 6-2-4 1-6 1-9Z"/>
+        </svg><img class="menu-lettering heading-lettering" src="./assets/menu/lettering-bora-pra-chapa.png" alt="Bora pra chapa"></h2></div>
     <label class="name-ticket"><span class="field-caption">Seu nome</span><input id="nameInput" class="nameField" maxlength="16" value="Docão" autocomplete="nickname" spellcheck="false"></label>
     <div class="mappick">
       <div class="label2">Mapa</div>
@@ -104,12 +118,13 @@
     </div>
       </section>
       <section id="menu-operator" aria-label="Visual do personagem" tabindex="0" hidden>
-        <div class="section-heading"><span>VESTIDO PRA CONFUSÃO</span><h2>Seu Docão, seu estilo</h2><p>Escolha uma skin e confira seu personagem no cenário.</p></div>
+        <div class="section-heading"><span>VESTIDO PRA CONFUSÃO</span><h2>Seu Docão, seu estilo</h2><p>Escolha seu figurino e confira o Docão.</p></div>
     <div class="skinpick">
       <div class="label2">Skin do Docão <span id="skinIdx"></span></div>
       <div class="skinrow"><button id="skinPrev" class="arrow">◀</button><div id="skinName">Clássico</div><button id="skinNext" class="arrow">▶</button></div>
       <div id="skinList"></div>
     </div>
+        <div id="wardrobePreview" class="wardrobe-preview" role="img" aria-label="Prévia do visual selecionado"><span>PRONTO PRA FAZER BAGUNÇA</span></div>
       </section>
       <section id="menu-settings" aria-label="Ajustes" tabindex="0" hidden>
         <div class="section-heading"><span>ACERTE O TEMPERO</span><h2>Do seu jeito</h2><p>Ajuste a mira e conheça os controles.</p></div>
@@ -134,16 +149,34 @@
     </div>
     <footer class="menu-footer">
       <div class="rules" id="menuRules">Todos contra todos · vence quem fizer 20 abates ou liderar em 5 minutos</div>
-      <div class="playrow"><button id="playBtn">JOGAR <small>SOLO · CONTRA BOTS</small></button><button id="onlineBtn" class="online">JUNTAR A TURMA <small>ONLINE</small></button></div>
+      <div class="playrow"><button id="playBtn"><span class="play-title"><img class="menu-lettering" src="./assets/menu/lettering-jogar.png" alt="Jogar"></span><small>SOLO · CONTRA BOTS</small></button><button id="onlineBtn" class="online"><img class="menu-lettering" src="./assets/menu/lettering-juntar-porcada-creme.png" alt="Juntar a porcada"><small>ONLINE</small></button></div>
     </footer>
+    </div>
   </div>
   <nav class="menu-tools" aria-label="Preferências">
     <button type="button" class="sound-toggle" id="menuSound" aria-label="Silenciar áudio" aria-pressed="false" title="Silenciar áudio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="sound-waves" d="M16 8q5 4 0 8M19 5q8 7 0 14"/></svg></button>
     <button type="button" class="settings-cap" data-menu-view="settings" aria-controls="menu-settings" aria-expanded="false" aria-label="Ajustes" title="Ajustes"><span aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m13 2-1 5-3 1-4-2-3 5 4 3v4l-4 3 3 5 4-2 3 1 1 5h6l1-5 3-1 4 2 3-5-4-3v-4l4-3-3-5-4 2-3-1-1-5Zm3 9a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z"/></svg></span></button>
   </nav>
   <nav class="showcase-actions" aria-label="Personagem e equipamento">
-    <button type="button" class="arsenal-crate" data-menu-view="arsenal" aria-controls="menu-arsenal" aria-expanded="false"><svg class="crate-mark" viewBox="0 0 54 55" aria-hidden="true"><path d="M5 49V16L11 3l6 13v33Zm16 0V16L27 3l6 13v33Zm16 0V16L43 3l6 13v33Z"/></svg><span>ABRIR<br><b>ARSENAL</b></span></button>
-    <button type="button" class="wardrobe-sign" data-menu-view="operator" aria-controls="menu-operator" aria-expanded="false"><svg viewBox="0 0 48 40" aria-hidden="true"><path d="m15 3-12 9 7 10 6-4v19h16V18l6 4 7-10-12-9q-9 10-18 0Z"/></svg><span>TROCAR<br>O VISUAL</span></button>
+    <button type="button" class="arsenal-crate" aria-label="Arsenal" data-menu-view="arsenal" aria-controls="menu-arsenal" aria-expanded="false"><span class="plaque-surface" aria-hidden="true"></span><svg class="crate-mark" viewBox="0 0 56 57" aria-hidden="true">
+      <defs>
+        <linearGradient id="ammo-paint" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffedc3"/><stop offset=".38" stop-color="#efd09b"/><stop offset="1" stop-color="#c9985e"/></linearGradient>
+        <path id="ammo-shape" d="m5 49 .3-32L11 3l5.7 13.7.3 32.3-3 .7-1.2-.6-4 .5Z"/>
+      </defs>
+      <g fill="#70502f" stroke="#543b27" stroke-width="1" stroke-linejoin="round"><use href="#ammo-shape" transform="translate(1.5 2)"/><use href="#ammo-shape" transform="translate(17.5 2)"/><use href="#ammo-shape" transform="translate(33.5 2)"/></g>
+      <g fill="url(#ammo-paint)" stroke="#9d7446" stroke-width=".7" stroke-linejoin="round"><use href="#ammo-shape"/><use href="#ammo-shape" x="16"/><use href="#ammo-shape" x="32"/></g>
+      <g fill="none" stroke="#fff2d2" stroke-width="1.3" opacity=".7"><path d="m6.8 46 .1-28L11 7m11.8 39 .1-28L27 7m11.8 39 .1-28L43 7"/></g>
+      <g fill="none" stroke="#a97c48" stroke-width=".8"><path d="M6 42h10m6 0h10m6 0h10M9 24l3-1m14 8 3-1m13-8 3-1M7 46h8m8 0h8m8 0h8"/></g>
+    </svg><img class="action-lettering" src="./assets/menu/lettering-arsenal.png" alt="" decoding="async"></button>
+    <button type="button" class="wardrobe-sign" aria-label="Trocar visual" data-menu-view="operator" aria-controls="menu-operator" aria-expanded="false"><span class="plaque-surface" aria-hidden="true"></span><svg class="wardrobe-mark" viewBox="0 0 50 44" aria-hidden="true">
+      <defs>
+        <path id="shirt-shape" d="m15 3-12 9 7 10 6-4v18.5l7 .5 3-.6 6 .6V18l6 4 7-10-12-9q-9 10-18 0Z"/>
+      </defs>
+      <use href="#shirt-shape" x="1.5" y="2.5" fill="#172d22" stroke="#172d22" stroke-width="1.2" stroke-linejoin="round"/>
+      <use href="#shirt-shape" fill="#fff0cc" stroke="#172d22" stroke-width="1" stroke-linejoin="round"/>
+      <path d="m5 12 10-7m18 0 10 7M18 20v14h11" fill="none" stroke="#fff9e8" stroke-width="1.1" stroke-linecap="round" opacity=".7"/>
+      <path d="M15 4q9 13 18 0M8 18l3 2m26 0 3-2M18 33h11" fill="none" stroke="#c6a770" stroke-width="1"/>
+    </svg><img class="action-lettering" src="./assets/menu/lettering-trocar-visual-creme.png" alt="" decoding="async"></button>
   </nav>
   <div class="menu-key-hints"><span><kbd>W A S D</kbd> mover</span><span><kbd>MOUSE</kbd> mirar</span><span><kbd>ESPAÇO</kbd> pular</span><button type="button" data-menu-view="settings">CONTROLES</button></div>
 </div>

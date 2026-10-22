@@ -1,5 +1,7 @@
 // Docão Shooter — jogo original de tiro em primeira pessoa com o Docão (mascote Cheers).
 import * as THREE from 'three';
+import { makeWardrobeCase } from './menu-wardrobe.js';
+import { makeMenuBackdrop } from './menu-backdrop.js';
 import { makeDocao, makeFPArms, makeFPForearm, poseFPForearm, setPose, toon, outline, makeCup, makeRocket, drawLogo, makeKnife } from './docao.js';
 import { makeFPSniper, poseSniperBolt } from './sniper-view.js';
 import { makeFPSaber, makeWorldSaber, setSaberColor, poseSaber } from './saber-view.js';
@@ -2080,7 +2082,7 @@ function botShoot(b, t, dist = 10) {
 // Entradas do menu fazem parte da vitrine; a comanda mantém a partida a um clique.
 const menuViewButtons = [...document.querySelectorAll('[data-menu-view]')];
 let menuViewTrigger = null;
-function openMenuView(view, trigger) {
+function setMenuView(view, trigger) {
   for (const name of ['match', 'arsenal', 'operator', 'settings']) $('menu-' + name).hidden = name !== view;
   for (const button of menuViewButtons) button.setAttribute('aria-expanded', String(button.dataset.menuView === view));
   $('menuBack').hidden = view === 'match';
@@ -2090,10 +2092,36 @@ function openMenuView(view, trigger) {
   if (view !== 'match') $('menu-' + view).focus();
   else if (menuViewTrigger) menuViewTrigger.focus();
 }
+// Uma única progressão dirige tampa, personagem, câmera e interface, inclusive na volta.
+const crateJourney = { progress: 0, target: 0, phase: 'closed', view: 'arsenal', nextView: 'match', homeNear: .1, homePosition: new V3(), homeQuaternion: new THREE.Quaternion(), homeOffset: 0 };
+function crateMenuBusy(busy) {
+  const menu = $('menu'); menu.setAttribute('aria-busy', String(busy));
+  for (const selector of ['.menu-panel', '.menu-tools', '.showcase-actions', '.menu-key-hints']) menu.querySelector(selector).inert = busy;
+  if (busy) { menu.tabIndex = -1; menu.focus({ preventScroll: true }); }
+}
+function openMenuView(view, trigger) {
+  if ((view === 'arsenal' || view === 'operator') && crateJourney.phase === 'closed') {
+    if (trigger) menuViewTrigger = trigger;
+    crateJourney.view = view; crateJourney.homeNear = camera.near;
+    $('menu').dataset.container = view === 'operator' ? 'wardrobe' : 'arsenal';
+    crateJourney.homePosition.copy(camera.position); crateJourney.homeQuaternion.copy(camera.quaternion);
+    crateJourney.homeOffset = camera.view?.enabled ? camera.view.offsetX / innerWidth : 0;
+    crateJourney.target = 1; crateJourney.phase = 'opening';
+    $('menu').dataset.crateState = 'opening'; crateMenuBusy(true);
+    return;
+  }
+  if (crateJourney.phase !== 'closed') {
+    if (view === crateJourney.view) return;
+    crateJourney.nextView = view; crateJourney.target = 0; crateJourney.phase = 'closing';
+    $('menu').dataset.crateState = 'closing'; crateMenuBusy(true);
+    return;
+  }
+  setMenuView(view, trigger);
+}
 menuViewButtons.forEach((button) => button.onclick = () => openMenuView(button.dataset.menuView, button));
 $('menuBack').onclick = () => openMenuView('match');
 $('menu').addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && $('menu').dataset.view && $('menu').dataset.view !== 'match') {
+  if (event.key === 'Escape' && (crateJourney.phase !== 'closed' || ($('menu').dataset.view && $('menu').dataset.view !== 'match'))) {
     event.preventDefault(); openMenuView('match');
   }
 });
@@ -2120,22 +2148,133 @@ for (const id of ['sens', 'sensAds']) {
 // Vitrine independente: a arte do menu e sua luz não alteram os mapas jogáveis.
 const menuScene = new THREE.Scene();
 menuScene.background = new THREE.Color(0xdfb477);
-new THREE.TextureLoader().load('./assets/menu/fazendinha-entardecer.png', (texture) => {
-  texture.colorSpace = THREE.SRGBColorSpace;
-  menuScene.background = texture;
-});
+const menuBackdrop = makeMenuBackdrop(THREE, menuScene, camera);
 menuScene.add(new THREE.HemisphereLight(0xffe6bd, 0x79522f, 2.1));
 const menuSun = new THREE.DirectionalLight(0xffd292, 2.4);
 menuSun.position.set(-3, 7, 5); menuScene.add(menuSun);
 const menuStage = new THREE.Group(); menuScene.add(menuStage);
-for (let i = 0; i < 7; i++) {
-  const plank = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.13, 1.1), new THREE.MeshStandardMaterial({ color: [0x8a603b, 0x98704b, 0xa47b4f][i % 3], roughness: 1 }));
-  plank.position.set((i - 3) * 0.355, -0.085, 0); menuStage.add(plank);
-  for (const z of [-0.43, 0.43]) {
-    const nail = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.005, 6), new THREE.MeshBasicMaterial({ color: 0x3c3025 }));
-    nail.position.set(plank.position.x, -0.018, z); menuStage.add(nail);
+const menuActorRoot = new THREE.Group(); menuScene.add(menuActorRoot);
+const crateLid = new THREE.Group(); crateLid.position.set(0, -.02, -.53); menuStage.add(crateLid);
+function onCrateLid(mesh) { crateLid.attach(mesh); return mesh; }
+// Pinceladas largas e veios quentes aproximam a caixa do assoalho ilustrado.
+const crateWood = ['#a76a36', '#b77b43', '#986032'].map((base, board) => {
+  const map = canvasTex(512, 256, (ctx) => {
+    ctx.fillStyle = base; ctx.fillRect(0, 0, 512, 256);
+    let seed = 43 + board * 137;
+    const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let i = 0; i < 65; i++) {
+      const x = rand() * 512, y = rand() * 256, length = 25 + rand() * 170;
+      ctx.fillStyle = i % 3 ? '#4c281318' : '#f4bd7425';
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + length, y - 2 - rand() * 5);
+      ctx.lineTo(x + length * .82, y + 2); ctx.lineTo(x - 12, y + 3 + rand() * 5); ctx.fill();
+    }
+    for (let i = 0; i < 12; i++) {
+      const x = rand() * 512, y = rand() * 256;
+      ctx.strokeStyle = '#512a1965'; ctx.lineWidth = 1 + rand() * 2;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.bezierCurveTo(x + 30, y - 5, x + 65, y + 6, x + 100, y - 2); ctx.stroke();
+    }
+    // Nós e pequenas lascas, desenhados em poucos planos como o chão da cena.
+    const knotX = 115 + board * 113, knotY = 90 + board * 32;
+    ctx.strokeStyle = '#59331d66'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(knotX, knotY, 27, 7, -.05, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#59331d66'; ctx.beginPath(); ctx.ellipse(knotX + 3, knotY, 12, 3, 0, 0, Math.PI * 2); ctx.fill();
+    for (const x of [35 + board * 23, 340 - board * 35]) {
+      ctx.fillStyle = '#5b331c88'; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 9, 0); ctx.lineTo(x + 4, 25); ctx.lineTo(x - 5, 34); ctx.fill();
+      ctx.fillStyle = '#e4a56066'; ctx.beginPath(); ctx.moveTo(x + 9, 0); ctx.lineTo(x + 13, 0); ctx.lineTo(x + 8, 27); ctx.lineTo(x - 5, 34); ctx.fill();
+    }
+    ctx.strokeStyle = '#e8ac644c'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(0, 3); ctx.lineTo(512, 3); ctx.stroke();
+    ctx.fillStyle = '#49291455'; ctx.fillRect(0, 249, 512, 7);
+  });
+  return new THREE.MeshStandardMaterial({ map, roughness: .95 });
+});
+const crateIron = new THREE.MeshStandardMaterial({ color: 0x544a37, roughness: 0.8, metalness: 0.12 });
+function crateBox(w, h, d, x, y, z, material) {
+  // Chanfros pequenos capturam a luz nas bordas das tábuas sem textura realista.
+  let geometry;
+  if (crateWood.includes(material) && Math.min(w, h, d) >= 0.1) {
+    const bevel = Math.min(0.015, Math.min(w, h, d) / 8);
+    const shape = new THREE.Shape();
+    const hw = w / 2 - bevel, hh = h / 2 - bevel;
+    shape.moveTo(-hw, -hh); shape.lineTo(hw, -hh); shape.lineTo(hw, hh); shape.lineTo(-hw, hh); shape.closePath();
+    geometry = new THREE.ExtrudeGeometry(shape, { depth: d - bevel * 2, bevelEnabled: true, bevelSize: bevel, bevelThickness: bevel, bevelSegments: 1, steps: 1 });
+    geometry.translate(0, 0, -d / 2 + bevel);
+  } else geometry = new THREE.BoxGeometry(w, h, d);
+  const part = new THREE.Mesh(geometry, material);
+  part.position.set(x, y, z); menuStage.add(part); return part;
+}
+// Tampa, corpo de tábuas e moldura frontal: o personagem fica sobre a caixa.
+for (let i = 0; i < 6; i++) {
+  onCrateLid(crateBox(0.34, 0.13, 1.1, (i - 2.5) * 0.35, -0.085, 0, crateWood[i % 3]));
+}
+for (let row = 0; row < 3; row++) {
+  const y = -0.24 - row * 0.26;
+  // Quatro paredes, em vez de blocos maciços: a câmera pode entrar de verdade.
+  for (const z of [-.478, .478]) crateBox(2.06, .25, .075, 0, y, z, crateWood[row % 3]);
+  for (const x of [-.993, .993]) crateBox(.075, .25, .9, x, y, 0, crateWood[(row + 1) % 3]);
+}
+crateBox(2.06, .1, 1.03, 0, -.88, 0, crateWood[0]);
+crateBox(2.13, 0.12, 0.12, 0, -0.18, 0.55, crateWood[2]);
+crateBox(2.13, 0.12, 0.12, 0, -0.91, 0.55, crateWood[0]);
+for (const x of [-0.97, 0.97]) {
+  crateBox(0.14, 0.85, 0.14, x, -0.54, 0.56, crateWood[2]);
+}
+for (const x of [-0.76, 0.76]) {
+  crateBox(0.095, 0.88, 0.035, x, -0.52, 0.61, crateIron);
+  onCrateLid(crateBox(0.095, 0.028, 1.09, x, -0.011, 0, crateIron));
+  for (const y of [-0.17, -0.86]) {
+    const rivet = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.016, 6), new THREE.MeshBasicMaterial({ color: 0xb7a37d }));
+    rivet.rotation.x = Math.PI / 2; rivet.position.set(x, y, 0.64); menuStage.add(rivet);
   }
 }
+// Pequeno estojo sobre a tampa, ao lado do Docão.
+onCrateLid(crateBox(0.48, 0.18, 0.24, -0.68, 0.08, -0.18, new THREE.MeshStandardMaterial({ color: 0x893d2b, roughness: 1 })));
+for (const x of [-0.83, -0.53]) onCrateLid(crateBox(0.035, 0.19, 0.25, x, 0.085, -0.18, crateIron));
+// Dobradiças e travessas ficam visíveis com a tampa aberta.
+for (const x of [-.72, .72]) {
+  crateBox(.17, .09, .10, x, -.12, -.53, crateIron);
+  onCrateLid(crateBox(.10, .06, .94, x, -.18, 0, crateWood[0]));
+}
+// Mala de figurinos apoiada na quina direita, com a base no mesmo piso da caixa.
+const wardrobeCase = makeWardrobeCase(THREE, canvasTex);
+wardrobeCase.position.set(1.43, -.975, .38); wardrobeCase.rotation.set(0, .10, .14);
+menuStage.add(wardrobeCase);
+const wardrobeAnchor = new V3(), wardrobeCorner = new V3();
+// A tinta faz parte da geometria: recebe a mesma luz e perspectiva da madeira.
+// O botão HTML transparente preserva foco, teclado e nome acessível.
+const cratePaint = new THREE.MeshStandardMaterial({ color: 0xe5bf85, transparent: true, roughness: 1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 });
+const crateInscription = new THREE.Mesh(new THREE.PlaneGeometry(1.38, .34), cratePaint);
+crateInscription.position.set(0, -.52, .518); crateInscription.visible = false; menuStage.add(crateInscription);
+const crateLetters = new Image();
+crateLetters.onload = () => {
+  cratePaint.map = canvasTex(1024, 256, (ctx) => {
+    ctx.drawImage(crateLetters, 200, 8, 810, 240);
+    const pixels = ctx.getImageData(0, 0, 1024, 256);
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      // Retira a extrusão escura do lettering original, mantendo só a face pintada.
+      const face = Math.min(1, Math.max(0, (pixels.data[i + 1] - 95) / 60));
+      pixels.data[i + 3] *= face * .92;
+      pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = 255;
+    }
+    ctx.putImageData(pixels, 0, 0);
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 3; i++) {
+      const x = 25 + i * 48;
+      ctx.beginPath(); ctx.moveTo(x, 214); ctx.lineTo(x + 2, 76); ctx.lineTo(x + 17, 27);
+      ctx.lineTo(x + 33, 76); ctx.lineTo(x + 34, 214); ctx.closePath(); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'destination-out';
+    // Falhas de tinta seguem os veios e a junta entre as duas tábuas.
+    for (let i = 0; i < 110; i++) {
+      ctx.fillStyle = i % 4 ? '#0005' : '#000b';
+      ctx.fillRect((i * 173 + 39) % 1024, (i * 47 + 13) % 256, 4 + i % 23, 1 + i % 2);
+    }
+    ctx.clearRect(0, 202, 1024, 8);
+  });
+  cratePaint.needsUpdate = true; crateInscription.visible = true;
+};
+crateLetters.src = './assets/menu/lettering-arsenal.png';
+const crateLabelPoint = new V3(), crateBasePoint = new V3(), crateLabelLeft = new V3(), crateLabelRight = new V3();
 const stageShadow = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.4), new THREE.MeshBasicMaterial({
   map: canvasTex(128, 128, (ctx) => {
     const g = ctx.createRadialGradient(64, 64, 6, 64, 64, 64); g.addColorStop(0, '#24160cc0'); g.addColorStop(1, '#24160c00');
@@ -2143,7 +2282,78 @@ const stageShadow = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.4), new THREE.
   }), transparent: true, depthWrite: false,
 }));
 stageShadow.rotation.x = -Math.PI / 2; stageShadow.position.y = -0.012; menuStage.add(stageShadow);
+const crateContactShadow = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 1.7), stageShadow.material.clone());
+crateContactShadow.rotation.x = -Math.PI / 2;
+crateContactShadow.position.set(.08, -.98, .05); menuStage.add(crateContactShadow);
+const wardrobeShadow = new THREE.Mesh(new THREE.PlaneGeometry(1.05, .65), stageShadow.material.clone());
+wardrobeShadow.rotation.x = -Math.PI / 2; wardrobeShadow.position.set(1.45, -.98, .38); menuStage.add(wardrobeShadow);
+const crateEndPosition = new V3(), crateEndLook = new V3(), crateLookMatrix = new THREE.Matrix4(), crateEndQuaternion = new THREE.Quaternion();
+const crateEase = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+function updateCrateJourney(dt) {
+  const trip = crateJourney;
+  if (trip.phase === 'closed') { menuActorRoot.position.set(0, 0, 0); stageShadow.material.opacity = 1; return; }
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const direction = trip.target ? 1 : -1;
+  trip.progress = reducedMotion ? trip.target : clamp(trip.progress + direction * dt / 1.85, 0, 1);
+  const p = trip.progress, dressing = trip.view === 'operator';
+  // O Docão dá espaço à tampa antes de a câmera descer.
+  const step = dressing ? 0 : crateEase(p / .24);
+  stageShadow.material.opacity = 1 - step;
+  menuActorRoot.position.set(1.75 * step, -.94 * step, -.8 * step).applyAxisAngle(new V3(0, 1, 0), menuStage.rotation.y);
+  const opening = crateEase((p - .14) / .38);
+  crateLid.rotation.x = dressing ? 0 : -1.95 * opening;
+  wardrobeCase.userData.door.rotation.y = dressing ? -1.95 * opening : 0;
+  const dive = crateEase((p - .32) / .68);
+  if (dressing) {
+    crateEndPosition.set(0, .42, .035).applyMatrix4(wardrobeCase.matrixWorld);
+    crateEndLook.set(0, .42, -.16).applyMatrix4(wardrobeCase.matrixWorld);
+  } else {
+    crateEndPosition.set(0, -.23, .21).applyMatrix4(menuStage.matrixWorld);
+    crateEndLook.set(0, -.79, -.37).applyMatrix4(menuStage.matrixWorld);
+  }
+  crateLookMatrix.lookAt(crateEndPosition, crateEndLook, camera.up); crateEndQuaternion.setFromRotationMatrix(crateLookMatrix);
+  camera.position.lerpVectors(trip.homePosition, crateEndPosition, dive);
+  camera.quaternion.copy(trip.homeQuaternion).slerp(crateEndQuaternion, dive);
+  camera.near = THREE.MathUtils.lerp(trip.homeNear, dressing ? .015 : .1, dive);
+  camera.setViewOffset(innerWidth, innerHeight, trip.homeOffset * innerWidth * (1 - dive), 0, innerWidth, innerHeight);
+  if (trip.target && p === 1 && trip.phase === 'opening') {
+    trip.phase = 'inside'; $('menu').dataset.crateState = 'inside';
+    crateMenuBusy(false); setMenuView(trip.view);
+    $('menuBack').textContent = dressing ? '← FECHAR MALA' : '← FECHAR CAIXA';
+  } else if (!trip.target && p === 0) {
+    trip.phase = 'closed'; delete $('menu').dataset.crateState; delete $('menu').dataset.container;
+    crateMenuBusy(false); setMenuView(trip.nextView);
+    $('menuBack').textContent = '← VOLTAR À PARTIDA';
+    menuActorRoot.position.set(0, 0, 0);
+  }
+}
 const showcase = new THREE.Group(); showcase.position.set(0, 3, 0); scene.add(showcase);
+const wardrobePreviewScene = new THREE.Scene();
+wardrobePreviewScene.add(new THREE.HemisphereLight(0xffedca, 0x46573a, 2.1));
+const wardrobePreviewLight = new THREE.DirectionalLight(0xffd79b, 2.4);
+wardrobePreviewLight.position.set(-3, 7, 5); wardrobePreviewScene.add(wardrobePreviewLight);
+const wardrobePreviewCamera = new THREE.PerspectiveCamera(38, 1, .1, 20);
+wardrobePreviewCamera.position.set(0, 1.05, 4.5); wardrobePreviewCamera.lookAt(0, 1.05, 0);
+const wardrobePreviewPosition = new V3(), wardrobePreviewRotation = new THREE.Quaternion();
+const wardrobePreviewRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+wardrobePreviewRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+wardrobePreviewRenderer.domElement.setAttribute('aria-hidden', 'true');
+$('wardrobePreview').appendChild(wardrobePreviewRenderer.domElement);
+let wardrobePreviewWidth = 0, wardrobePreviewHeight = 0;
+function renderWardrobePreview() {
+  if (crateJourney.phase !== 'inside' || crateJourney.view !== 'operator') return;
+  const rect = $('wardrobePreview').getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  wardrobePreviewPosition.copy(showcase.position); wardrobePreviewRotation.copy(showcase.quaternion);
+  wardrobePreviewScene.add(showcase); showcase.position.set(0, 0, 0); showcase.rotation.set(0, .12 + Math.sin(menuT * 1.8) * .1, 0);
+  wardrobePreviewCamera.aspect = rect.width / rect.height; wardrobePreviewCamera.updateProjectionMatrix();
+  if (wardrobePreviewWidth !== rect.width || wardrobePreviewHeight !== rect.height) {
+    wardrobePreviewRenderer.setSize(rect.width, rect.height, false);
+    wardrobePreviewWidth = rect.width; wardrobePreviewHeight = rect.height;
+  }
+  wardrobePreviewRenderer.render(wardrobePreviewScene, wardrobePreviewCamera);
+  menuActorRoot.add(showcase); showcase.position.copy(wardrobePreviewPosition); showcase.quaternion.copy(wardrobePreviewRotation);
+}
 let selectedSkin = getSkin(localStorage.getItem('docao.skin') || DEFAULT_SKIN).id, preview = null;
 // loadout: arma primária escolhida (salva no navegador)
 let selectedPrimary = (() => { const v = parseInt(localStorage.getItem('docao.primary')); return PRIMARIES.includes(v) ? v : 0; })();
@@ -2266,6 +2476,7 @@ function setPreview(id) {
   if (preview) showcase.remove(preview.group);
   preview = makeDocao(selectedSkin, { withGun: false, pose: 'idle' }); showcase.add(preview.group);
   $('skinName').textContent = getSkin(selectedSkin).name;
+  $('wardrobePreview').setAttribute('aria-label', `Prévia do visual ${getSkin(selectedSkin).name}`);
   $('skinIdx').textContent = `${SKINS.findIndex((s) => s.id === selectedSkin) + 1}/${SKINS.length}`;
   document.querySelectorAll('.skinchip').forEach((c) => c.classList.toggle('active', c.dataset.id === selectedSkin));
 }
@@ -2555,8 +2766,8 @@ function loop() {
     const sp = showcase.position; camera.position.set(sp.x + Math.sin(showCamYaw) * 3.5, showBaseY + 1.25, sp.z + Math.cos(showCamYaw) * 3.5); camera.lookAt(sp.x, showBaseY + 1.0, sp.z);
     // Docão da vitrine centralizado no espaço livre à direita do painel do menu (recalcula a cada frame: janela redimensionada,
     // menu mais largo com as 6 primárias...). Antes era um deslocamento fixo de 22% e, em janelas menores, a skin ficava atrás do menu.
-    const pr = $('menu').classList.contains('hidden') ? null : $('menu').querySelector('.panel').getBoundingClientRect();
-    const free = pr ? innerWidth - pr.right : innerWidth, cx = pr && free >= 200 ? pr.right + free / 2 : innerWidth * 0.72;
+    const pr = $('menu').classList.contains('hidden') || crateJourney.phase !== 'closed' ? null : $('menu').querySelector('.panel').getBoundingClientRect();
+    const free = pr ? innerWidth - pr.right : innerWidth, cx = pr && free >= 200 ? pr.right + free * (innerWidth > 720 ? 0.42 : 0.5) : innerWidth * 0.72;
     const offX = innerWidth / 2 - cx; menuPreviewX = cx;
     if (!camera.view || !camera.view.enabled || Math.abs(camera.view.offsetX - offX) > 0.5 || camera.view.fullWidth !== innerWidth || camera.view.fullHeight !== innerHeight) camera.setViewOffset(innerWidth, innerHeight, offX, 0, innerWidth, innerHeight);
     showcase.rotation.y = showCamYaw + 0.15 + Math.sin(menuT * 1.8) * 0.12; showcase.position.y = showBaseY + (getSkin(selectedSkin).float ? 0.1 + Math.sin(menuT * 10) * 0.06 : Math.abs(Math.sin(menuT * 6)) * 0.06);
@@ -2566,10 +2777,35 @@ function loop() {
   const camO = window.__cam; // testes/screenshots: câmera livre { p: [x, y, z], t: [x, y, z], fov }
   if (camO) { camera.position.set(...camO.p); camera.lookAt(...camO.t); if (camO.fov && camera.fov !== camO.fov) { camera.fov = camO.fov; camera.updateProjectionMatrix(); } }
   if (state === 'menu' && !camO) {
-    if (showcase.parent !== menuScene) menuScene.add(showcase);
+    if (showcase.parent !== menuActorRoot) menuActorRoot.add(showcase);
     menuStage.position.set(showcase.position.x, showBaseY, showcase.position.z);
-    menuStage.rotation.y = showCamYaw;
+    menuStage.rotation.y = showCamYaw - 0.23;
+    menuStage.updateMatrixWorld(true);
+    updateCrateJourney(dt);
+    camera.updateMatrixWorld(true);
+    if (crateJourney.phase === 'closed') menuBackdrop.fit(showBaseY - .985);
+    if (innerWidth > 720) {
+      crateLabelPoint.set(0, -0.52, 0.65).applyMatrix4(menuStage.matrixWorld).project(camera);
+      crateBasePoint.set(0, -0.97, 0.61).applyMatrix4(menuStage.matrixWorld).project(camera);
+      crateLabelLeft.set(-0.6, -0.52, 0.65).applyMatrix4(menuStage.matrixWorld).project(camera);
+      crateLabelRight.set(0.6, -0.52, 0.65).applyMatrix4(menuStage.matrixWorld).project(camera);
+      const labelAngle = Math.atan2(-(crateLabelRight.y - crateLabelLeft.y) * innerHeight, (crateLabelRight.x - crateLabelLeft.x) * innerWidth) * 180 / Math.PI;
+      const menuStyle = $('menu').style;
+      menuStyle.setProperty('--crate-label-angle', `${labelAngle}deg`);
+      wardrobeAnchor.set(0, .44, .17).applyMatrix4(wardrobeCase.matrixWorld).project(camera);
+      menuStyle.setProperty('--wardrobe-x', `${(wardrobeAnchor.x + 1) * innerWidth / 2}px`);
+      menuStyle.setProperty('--wardrobe-y', `${(1 - wardrobeAnchor.y) * innerHeight / 2}px`);
+      wardrobeCorner.set(.39, .94, .17).applyMatrix4(wardrobeCase.matrixWorld).project(camera);
+      const wardrobeTop = (1 - wardrobeCorner.y) * innerHeight / 2;
+      wardrobeCorner.set(-.39, 0, .17).applyMatrix4(wardrobeCase.matrixWorld).project(camera);
+      menuStyle.setProperty('--wardrobe-height', `${Math.max(60, (1 - wardrobeCorner.y) * innerHeight / 2 - wardrobeTop)}px`);
+      menuStyle.setProperty('--wardrobe-width', `${Math.max(55, Math.abs(wardrobeCorner.x - wardrobeAnchor.x) * innerWidth * 1.08)}px`);
+      menuStyle.setProperty('--arsenal-x', `${(crateLabelPoint.x + 1) * innerWidth / 2}px`);
+      menuStyle.setProperty('--arsenal-y', `${(1 - crateLabelPoint.y) * innerHeight / 2}px`);
+      menuStyle.setProperty('--crate-bottom', `${Math.min(innerHeight - 55, (1 - crateBasePoint.y) * innerHeight / 2)}px`);
+    }
     renderer.render(menuScene, camera);
+    renderWardrobePreview();
   } else {
     if (showcase.parent !== scene) scene.add(showcase);
     renderer.render(scene, camera);
@@ -2707,7 +2943,9 @@ function refreshMenuMode() {
   $('menuTeam').classList.toggle('hidden', v !== 'dom');
   $('botCount').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode);
   $('timeSel').closest('label').classList.toggle('hidden', v === 'explore' || v === TRAIN.mode);
-  $('playBtn').innerHTML = v === 'explore' ? 'EXPLORAR <small>SEM BOTS · SEM PRESSA</small>' : v === TRAIN.mode ? 'TREINAR <small>ESTANDE · SEM LIMITE</small>' : 'JOGAR <small>SOLO · CONTRA BOTS</small>';
+  const playTitle = v === 'explore' ? 'EXPLORAR' : v === TRAIN.mode ? 'TREINAR' : '<img class="menu-lettering" src="./assets/menu/lettering-jogar.png" alt="Jogar">';
+  const playHint = v === 'explore' ? 'SEM BOTS · SEM PRESSA' : v === TRAIN.mode ? 'ESTANDE · SEM LIMITE' : 'SOLO · CONTRA BOTS';
+  $('playBtn').innerHTML = `<span class="play-title">${playTitle}</span><small>${playHint}</small>`;
   $('menuRules').textContent = MENU_RULES[v];
   teamButtons($('menuTeamBtns'), menuTeam, (t) => { menuTeam = t; refreshMenuMode(); });
 }
