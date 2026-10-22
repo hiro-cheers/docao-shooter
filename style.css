@@ -225,13 +225,13 @@ label.checkline input{width:auto;display:inline-block;margin:0;accent-color:#e63
 .voicebox{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;margin:8px 0}
 .voicehint{font-size:12px;color:#cfe;font-weight:bold}
 .voicebox.live{outline:2px solid #7DF9FF;border-radius:12px}
-#socialHud{position:fixed;left:16px;bottom:132px;width:min(440px,48vw);z-index:7;display:flex;flex-direction:column;gap:6px;pointer-events:none}
-/* morto: o painel de arma ocupa o fundo. Chat e voz sobem pro canto, longe dos cartões */
-body.dead #socialHud{top:10px;right:14px;bottom:auto;left:auto;width:min(320px,42vw);align-items:flex-end;z-index:12;max-height:38vh}
+#socialHud{position:fixed;top:10px;right:14px;bottom:auto;left:auto;width:min(380px,42vw);max-height:42vh;z-index:7;display:flex;flex-direction:column;gap:6px;align-items:stretch;pointer-events:none}
+#socialHud .voicebox{margin:0;justify-content:flex-start;width:max-content;max-width:100%;align-self:flex-end;background:rgba(12,16,32,.92);border:3px solid #2a1410;border-radius:14px;padding:6px 8px}
+body.dead #socialHud{z-index:12;width:min(320px,42vw)}
 body.dead #socialHud .voicebox{margin:0;background:rgba(12,16,32,.9);border:3px solid #2a1410;border-radius:14px;padding:6px 8px}
 body.dead #killfeed{left:16px;right:auto;align-items:flex-start}
 #socialHud .chatform,#socialHud .voicebox,#chat.open .chatlog,#socialHud .chatlog{pointer-events:auto}
-#socialHud .chatlog{max-height:220px}
+#socialHud .chatlog{max-height:32vh;min-height:140px;width:100%;overflow-y:auto;background:rgba(12,16,32,.82);border:3px solid #2a1410;border-radius:12px;padding:6px}
 #socialHud .cline{background:rgba(0,0,0,.78);text-shadow:0 1px 0 #000}
 #chatScopeLabel{font-family:"Arial Black",Impact,sans-serif;font-size:12px;color:#ffd27a;background:rgba(0,0,0,.55);border-radius:8px;padding:6px 8px}
 #lb .row[data-pid]{pointer-events:auto;cursor:pointer}

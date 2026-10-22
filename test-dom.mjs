@@ -96,12 +96,12 @@ await G(() => { window.__docao.setPrimary(2); const g = window.__docao, p = g.pl
 await until(() => window.__docao.player.alive && window.__docao.player.weapon === 2, 20000);
 await G(() => { const p = window.__docao.player; p.vel.set(0, 0, 0); p.pitch = 0.05; p.yaw = 0.3; p.invulnUntil = 0; p.mag[2] = 5; });
 await page.click('#game'); await wait(300); await G(() => { const p = window.__docao.player; p.pitch = 0.05; p.yaw = 0.3; });
-await page.mouse.move(640, 360); await page.keyboard.down('ShiftLeft'); await wait(500);
+await page.mouse.move(640, 360); await page.mouse.down({ button: 'right' }); await wait(500);
 const sc = await G(() => window.__docao.scoped);
 console.log('antes do tiro:', JSON.stringify(await G(() => { const g = window.__docao, p = g.player; return { st: g.state, lock: !!document.pointerLockElement, alive: p.alive, w: p.weapon, mag: p.mag[p.weapon], nf: p.nextFire - g.time, sw: p.switchEnd - g.time, rl: p.reloadEnd - g.time, sc: g.scoped, ads: g.ads }; })));
 await page.mouse.down(); await wait(80); await page.mouse.up(); await wait(150);
 const shot = await G(() => ({ s: window.__lastShot, pitch: window.__docao.player.pitch, yaw: window.__docao.player.yaw }));
-await page.keyboard.up('ShiftLeft');
+await page.mouse.up({ button: 'right' });
 const fwd = [-Math.sin(0.3) * Math.cos(0.05), Math.sin(0.05), -Math.cos(0.3) * Math.cos(0.05)];
 const dot = shot.s ? shot.s.dir.reduce((a, v, i) => a + v * fwd[i], 0) : 0;
 console.log('tiro:', JSON.stringify(shot));

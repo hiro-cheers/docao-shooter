@@ -7,15 +7,26 @@
 //  • Foguete colide com a cápsula (com a folga do próprio foguete), então acerto direto sempre conta (d = 0 → dano máximo).
 //  • Sniper: dispersão zero com luneta e parado/quase parado; pequena andando ou sem luneta.
 // ============================================================
+import { stanceScale } from './stance.js';
+
 export const BODY = { y0: 0.6, y1: 1.5, r: 0.58 };
 export const ROCKET_PAD = 0.15;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-export function bodyClosest(c, pos) {
-  const ax = pos.x, ay = clamp(c.y, pos.y + BODY.y0, pos.y + BODY.y1), az = pos.z;
-  const dx = c.x - ax, dy = c.y - ay, dz = c.z - az, L = Math.hypot(dx, dy, dz);
-  if (L <= BODY.r) return { d: 0, point: { x: c.x, y: c.y, z: c.z } };
-  const k = BODY.r / L; return { d: L - BODY.r, point: { x: ax + dx * k, y: ay + dy * k, z: az + dz * k } };
+export function bodyClosest(c, pos, crouch = 0) {
+  const scale = stanceScale(crouch), r = BODY.r, ry = r * scale;
+  const ay = clamp(c.y, pos.y + BODY.y0 * scale, pos.y + BODY.y1 * scale);
+  const dx = c.x - pos.x, dy = c.y - ay, dz = c.z - pos.z, h = Math.hypot(dx, dz);
+  if ((h / r) ** 2 + (dy / ry) ** 2 <= 1) return { d: 0, point: { x: c.x, y: c.y, z: c.z } };
+  // Ponto mais próximo na tampa elíptica (ou na lateral cilíndrica).
+  let lo = 0, hi = Math.max(r, ry) * Math.hypot(h, dy);
+  for (let i = 0; i < 40; i++) {
+    const m = (lo + hi) / 2;
+    if ((r * h / (m + r * r)) ** 2 + (ry * dy / (m + ry * ry)) ** 2 > 1) lo = m; else hi = m;
+  }
+  const k = r * r / (hi + r * r), ky = ry * ry / (hi + ry * ry);
+  const point = { x: pos.x + dx * k, y: ay + dy * ky, z: pos.z + dz * k };
+  return { d: Math.hypot(c.x - point.x, c.y - point.y, c.z - point.z), point };
 }
 // alvos de uma explosão: [{ e, d, k, dmg, knock:{x,y,z} }]; losClear(a, b) = linha livre entre pontos
 // direct = entidade em que o foguete bateu (contato com o casco): conta como distância 0, dano máximo
@@ -24,8 +35,8 @@ export function explosionHits(c, o, ents, losClear, owner, teamMode, direct = nu
   for (const e of ents) {
     if (!e.alive) continue;
     if (teamMode && owner && e !== owner && e.team === owner.team) continue; // sem fogo amigo (dano em si mesmo continua)
-    const bc = bodyClosest(c, e.pos), point = bc.point, d = e === direct ? 0 : bc.d; if (d > o.radius) continue;
-    const pts = [point, { x: e.pos.x, y: e.pos.y + 0.3, z: e.pos.z }, { x: e.pos.x, y: e.pos.y + 1.0, z: e.pos.z }, { x: e.pos.x, y: e.pos.y + 1.7, z: e.pos.z }];
+    const scale = stanceScale(e.crouch), bc = bodyClosest(c, e.pos, e.crouch), point = bc.point, d = e === direct ? 0 : bc.d; if (d > o.radius) continue;
+    const pts = [point, ...[0.3, 1.0, 1.7].map((y) => ({ x: e.pos.x, y: e.pos.y + y * scale, z: e.pos.z }))];
     let seen = d < 0.35; for (const s of srcs) { if (seen) break; for (const p of pts) if (losClear(s, p)) { seen = true; break; } }
     if (!seen) continue;
     const k = 1 - d / o.radius;
@@ -36,15 +47,17 @@ export function explosionHits(c, o, ents, losClear, owner, teamMode, direct = nu
   return out;
 }
 // raio × cápsula vertical em pos (com folga pad). Devolve t ≥ 0 do primeiro contato ou null.
-export function rayCapsule(o, d, maxT, pos, pad = 0) {
-  const R = BODY.r + pad, y0 = pos.y + BODY.y0, y1 = pos.y + BODY.y1; let best = null;
+export function rayCapsule(o, d, maxT, pos, pad = 0, crouch = 0) {
+  const scale = stanceScale(crouch), R = BODY.r + pad, ry = BODY.r * scale + pad;
+  const y0 = pos.y + BODY.y0 * scale, y1 = pos.y + BODY.y1 * scale; let best = null;
   const take = (t) => { if (t >= 0 && t <= maxT && (best === null || t < best)) best = t; };
   const ox = o.x - pos.x, oz = o.z - pos.z, A = d.x * d.x + d.z * d.z, B = 2 * (ox * d.x + oz * d.z), C = ox * ox + oz * oz - R * R;
   if (C <= 0 && o.y >= y0 && o.y <= y1) return 0; // começou dentro
   if (A > 1e-9) { const disc = B * B - 4 * A * C; if (disc >= 0) { const t = (-B - Math.sqrt(disc)) / (2 * A); const y = o.y + d.y * t; if (y >= y0 && y <= y1) take(t); } }
   for (const cy of [y0, y1]) { // tampas esféricas
-    const px = ox, py = o.y - cy, pz = oz, b = px * d.x + py * d.y + pz * d.z, cc = px * px + py * py + pz * pz - R * R, h = b * b - cc;
-    if (cc <= 0) return 0; if (h >= 0) take(-b - Math.sqrt(h));
+    const k = R / ry, py = (o.y - cy) * k, vy = d.y * k;
+    const a = d.x * d.x + vy * vy + d.z * d.z, b = ox * d.x + py * vy + oz * d.z, cc = ox * ox + py * py + oz * oz - R * R, h = b * b - a * cc;
+    if (cc <= 0) return 0; if (a > 1e-9 && h >= 0) take((-b - Math.sqrt(h)) / a);
   }
   return best;
 }

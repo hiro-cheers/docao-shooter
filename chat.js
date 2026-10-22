@@ -1,5 +1,4 @@
-// Chat da sala: log único no HUD (some sozinho), no lobby e no fim da partida.
-const FADE_MS = 8000;
+// Chat da sala: o histórico fica aberto no canto da partida e também no lobby e no fim.
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -39,11 +38,10 @@ export function initChat(h) {
   $('chatInput').addEventListener('keydown', (e) => {
     e.stopPropagation();
     if (e.code === 'Escape') { e.preventDefault(); closeChat(true); }
-    if (e.code === 'Tab') { e.preventDefault(); flipHudScope(); }
+    if (e.code === 'Tab') e.preventDefault();
   });
   $('chatInput').addEventListener('keyup', (e) => { if (e.code !== 'KeyK') e.stopPropagation(); });
   paintScope();
-  setInterval(() => render(false), 1000);
 }
 
 function bindKeep(formId, inputId) {
@@ -52,7 +50,7 @@ function bindKeep(formId, inputId) {
   input.addEventListener('keydown', (e) => {
     e.stopPropagation();
     if (e.code === 'Escape') input.blur();
-    if (e.code === 'Tab') { e.preventDefault(); flipKeepScope(); }
+    if (e.code === 'Tab') e.preventDefault();
   });
   input.addEventListener('keyup', (e) => { if (e.code !== 'KeyK') e.stopPropagation(); });
 }
@@ -117,14 +115,11 @@ function sendText(sc, raw) {
   if (me) chatPush({ local: 1, id: me.id, name: me.name, team: me.team, scope, dead: me.dead ? 1 : 0, text, at: Date.now() });
   hooks.send({ t: 'say', text, scope });
 }
-function flipHudScope() {
-  if (!hooks.teamMode()) return;
-  scope = scope === 'team' ? 'all' : 'team';
-  $('chatScopeLabel').textContent = scope === 'team' ? 'Time' : 'Todos';
-}
-function flipKeepScope() {
-  if (!hooks.teamMode()) return;
-  composeScope = composeScope === 'team' ? 'all' : 'team';
+export function chatUseAll() {
+  scope = 'all';
+  composeScope = 'all';
+  const label = $('chatScopeLabel');
+  if (label) label.textContent = 'Todos';
   paintScope();
 }
 function paintScope() {
@@ -141,14 +136,13 @@ function lineHtml(l) {
   return `<div class="cline${l.dead ? ' dead' : ''}"><i>${who}</i> <b class="${tm}">${esc(l.name)}</b> ${esc(l.text)}${l.dead ? ' <em>(morto)</em>' : ''}</div>`;
 }
 function render(force) {
-  const now = Date.now();
-  const hud = typing ? lines.slice(-12) : lines.filter((l) => now - (l.at || 0) < FADE_MS).slice(-8);
-  const next = (typing ? '1' : '0') + hud.map((l) => l.at + l.text).join('|') + '#' + lines.map((l) => l.at + l.text).join('|');
+  const next = (typing ? '1' : '0') + lines.map((l) => (l.at || 0) + l.text).join('|');
   if (!force && next === sig) return;
   sig = next;
+  const html = lines.map(lineHtml).join('');
   document.querySelectorAll('[data-chat]').forEach((el) => {
-    const use = el.dataset.chat === 'fade' ? hud : lines;
-    el.innerHTML = use.map(lineHtml).join('');
-    el.scrollTop = el.scrollHeight;
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 28;
+    el.innerHTML = html;
+    if (near) el.scrollTop = el.scrollHeight;
   });
 }

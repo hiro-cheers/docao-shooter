@@ -93,7 +93,7 @@ await page.evaluate(() => { const p = window.__docao.player; p.pos.set(window.__
 await page.waitForTimeout(300);
 console.log('pickup:', JSON.stringify(await page.evaluate(() => ({ nades: window.__docao.player.nades, pickupActive: window.__pk.active, hud: [0, 1, 2].map((i) => document.getElementById('nade' + i).classList.contains('on')) }))));
 
-// mira com zoom (Shift)
+// mira com zoom (botão direito)
 const waitGame = async (sec) => { const t0 = await page.evaluate(() => window.__docao.time); await page.waitForFunction((t) => window.__docao.time >= t, t0 + sec, { timeout: 30000, polling: 16 }); };
 await page.evaluate(() => { const g = window.__docao, p = g.player; p.alive = true; p.hp = 100; p.weapon = 0; p.reloadEnd = 0; p.switchEnd = 0; p.mag[0] = 30; p.mag[1] = 6; p.vel.set(0, 0, 0);
   p.pos.set(0, 0, 26); p.yaw = 0; p.pitch = 0.02; p.invulnUntil = g.time + 999;
@@ -104,17 +104,17 @@ zoomRes.locked = await page.evaluate(() => !!document.pointerLockElement);
 const yawAfterMove = () => page.evaluate(() => { const p = window.__docao.player, y0 = p.yaw; document.dispatchEvent(new MouseEvent('mousemove', { movementX: 100 })); const d = y0 - p.yaw; p.yaw = y0; return +d.toFixed(4); });
 zoomRes.fovNormal = await page.evaluate(() => window.__docao.fov);
 zoomRes.yawNormal = await yawAfterMove();
-await page.keyboard.down('Shift'); await waitGame(0.3);
+await page.mouse.down({ button: 'right' }); await waitGame(0.3);
 zoomRes.fovRifle = +(await page.evaluate(() => window.__docao.fov)).toFixed(1);
 zoomRes.yawZoom = await yawAfterMove();
 await page.evaluate(() => { window.__docao.player.yaw = 0; window.__docao.player.pitch = 0.02; }); await waitGame(0.1);
 await page.screenshot({ path: 'screenshots/11-zoom.png' });
 await page.keyboard.down('KeyW'); await waitGame(0.6);
 zoomRes.speedZoom = +(await page.evaluate(() => Math.hypot(window.__docao.player.vel.x, window.__docao.player.vel.z))).toFixed(2);
-await page.keyboard.up('Shift'); await waitGame(0.6);
+await page.mouse.up({ button: 'right' }); await waitGame(0.6);
 zoomRes.speedNormal = +(await page.evaluate(() => Math.hypot(window.__docao.player.vel.x, window.__docao.player.vel.z))).toFixed(2);
 await page.keyboard.up('KeyW');
-await page.keyboard.down('Shift'); await page.keyboard.press('Digit2'); await waitGame(0.7);
+await page.mouse.down({ button: 'right' }); await page.keyboard.press('Digit2'); await waitGame(0.7);
 zoomRes.fovPistol = +(await page.evaluate(() => window.__docao.fov)).toFixed(1);
 await page.evaluate(() => { window.__docao.player.nades = 2; });
 await page.keyboard.down('KeyQ'); await waitGame(0.5);
@@ -126,7 +126,7 @@ await page.evaluate(() => { window.__docao.player.mag[4] = 2; }); await page.key
 zoomRes.fovDuringReload = +(await page.evaluate(() => window.__docao.fov)).toFixed(1);
 await waitGame(2.0);
 zoomRes.fovAfterReload = +(await page.evaluate(() => window.__docao.fov)).toFixed(1);
-await page.keyboard.up('Shift'); await waitGame(0.4);
+await page.mouse.up({ button: 'right' }); await waitGame(0.4);
 zoomRes.fovReleased = +(await page.evaluate(() => window.__docao.fov)).toFixed(1);
 console.log('zoom:', JSON.stringify(zoomRes));
 await page.evaluate(() => { window.__docao.entities.forEach((e) => (e.frozen = false)); window.__docao.player.weapon = 0; });
@@ -167,12 +167,12 @@ W.cal12.reloadInterrupted = await page.evaluate(() => window.__docao.player.relo
 W.cal12.magAfterShot = await page.evaluate(() => window.__docao.player.mag[1]);
 // 3) Sniper: luneta parado = abate com 1 tiro no corpo a ~30 m
 W.sniper = await equipViaDeath(3); await setupTarget(-4); await waitGame(1.0);
-await page.keyboard.down('Shift'); await waitGame(0.35);
+await page.mouse.down({ button: 'right' }); await waitGame(0.35);
 W.sniper.scoped = await page.evaluate(() => window.__docao.scoped && !document.getElementById('scope').classList.contains('hidden'));
 W.sniper.fov = +(await page.evaluate(() => window.__docao.fov)).toFixed(1);
 await page.screenshot({ path: 'screenshots/12-sniper-scope.png' });
 await shoot(); await waitGame(0.1); W.sniper.target = await tState();
-await page.keyboard.up('Shift'); await waitGame(0.3);
+await page.mouse.up({ button: 'right' }); await waitGame(0.3);
 // 4) Bazuca: foguete visível com fumaça, abate em área, rocket jump
 // tela de morte: 1 Fuzil · 2 Calibre 12 · 3 Sniper · 4 Canhão · 5 Carabina · 6 Bazuca (ordem do PR #1)
 W.bazuca = await equipViaDeath(6); await setupTarget(4); await waitGame(0.5);

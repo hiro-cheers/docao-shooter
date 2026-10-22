@@ -8,15 +8,16 @@
 // ============================================================
 import { MELEE } from './rules.js';
 import { bodyClosest, BODY } from './combat.js';
+import { stanceScale } from './stance.js';
 
 export const MELEE_KINDS = ['slash', 'stab'];
 // eye/dir: {x,y,z} (dir normalizado). targets: [{ e, p: posição (pés), yaw: yaw do modelo }]. los(a, b) → true se livre.
 export function meleeHit(eye, dir, kind, targets, los) {
   const K = MELEE[kind] || MELEE.slash; let best = null;
-  for (const { e, p, yaw } of targets) {
-    const bc = bodyClosest(eye, p); if (bc.d > K.range) continue;
+  for (const { e, p, yaw, crouch = e.crouch } of targets) {
+    const scale = stanceScale(crouch), bc = bodyClosest(eye, p, crouch); if (bc.d > K.range) continue;
     // direção até o eixo do corpo (na altura do olho, limitada ao tronco)
-    const ay = Math.max(p.y + BODY.y0, Math.min(p.y + BODY.y1, eye.y));
+    const ay = Math.max(p.y + BODY.y0 * scale, Math.min(p.y + BODY.y1 * scale, eye.y));
     const vx = p.x - eye.x, vy = ay - eye.y, vz = p.z - eye.z, L = Math.hypot(vx, vy, vz);
     if (L > 1e-3) {
       const cos = (vx * dir.x + vy * dir.y + vz * dir.z) / L;

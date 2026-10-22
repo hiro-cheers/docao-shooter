@@ -6,38 +6,13 @@ Jogue em **https://docao.mvalentim.dev**
 
 ## Próxima versão
 
-- A mala de figurinos agora abre e recebe a câmera, revelando um provador com forro verde e prévia 3D das skins. Fechar Mala ou Esc retorna à vitrine, com suporte a movimento reduzido.
-- Trocar Visual virou uma mala de figurinos 3D apoiada na quina da caixa, com alça, fechos e inscrição pintada. A frente da mala abre a seleção de skins.
-- Durante o mergulho no Arsenal, chão e paisagem agora têm profundidade e paralaxe. O cenário muda de enquadramento junto da câmera e retorna ao sair da caixa.
-- O Arsenal agora abre a caixa: Docão sai da tampa, as dobradiças giram e a câmera entra para mostrar as armas em bandejas de madeira. Fechar ou Esc faz o caminho inverso, com suporte a movimento reduzido.
-- O Docão fica sobre uma caixa de armas 3D, com tábuas chanfradas, ferragens e estojo. A caixa tem uma leve rotação para mostrar profundidade, madeira quente com veios e lascas próximos ao assoalho e sombra de contato. A inscrição Arsenal é tinta gasta na superfície 3D, com a mesma luz e perspectiva da madeira. O painel da partida e a placa de visual se alinham à base dela.
-
-- O botão Trocar do mapa ficou maior. As placas Arsenal e Trocar Visual ganharam bordas de madeira recortadas e irregulares.
-
-- Jogar tem mais destaque que a ação online, que usa um verde-oliva mais discreto, mantendo o mesmo tamanho. O separador do título ganhou traço de tinta irregular e o painel ficou mais compacto.
-
-- Os botões Jogar e Juntar a Porcada agora ficam lado a lado, em tamanho compacto. A borda da placa tem pequenas lascas e um contorno irregular.
-
-- A comanda ganhou fundo de tábuas claras e moldura de madeira escura no estilo cartoon. O campo de nome segue o mesmo visual e tipografia dos seletores.
-
-- A moldura da comanda agora parece madeira pintada, com encaixes, cantos irregulares e pequenos pregos no estilo cartoon.
-
-- A chama de Bora pra Chapa agora dança como fogo aceso, com movimento suave e respeito à preferência de movimento reduzido.
-
-- A comanda ganhou um selo suíno circular e perdeu a frase abaixo do título. As ações Juntar a Porcada e Trocar Visual usam contraste claro sobre escuro.
-
-- A comanda acompanha a logo cartoon: lettering nos títulos e botões, prendedor ilustrado, moldura com relevo simples e campos com acabamento mais limpo.
-
-- As placas Arsenal e Trocar Visual usam o lettering da logo, com letras creme e fundo verde escuro nas ações secundárias, para melhorar a leitura. As balas e a camiseta ganharam relevo, e o texto do arsenal tem mais folga junto às ferragens.
-
-- Nova logo em placa de madeira ilustrada, com letras em relevo e fundo transparente. O acabamento segue um estilo cartoon, com contornos limpos e textura simplificada.
-
-- Os campos da comanda agora usam etiquetas impressas, papel claro e setas pintadas. Os ajustes de mira ganharam marcadores de tampinha e valores visíveis.
-
-- A fazendinha do menu agora tem cenário próprio ao entardecer, luz quente no Docão e um palco de madeira. A comanda ganhou acabamento de papel, carimbo suíno, opções lado a lado e placas com ferragens.
-
-- O menu virou a comanda da fazendinha: papel de açougue, placas de madeira e o botão Jogar. Arsenal e visual são acessados pelas placas junto do Docão; ajustes e áudio ficam no canto superior direito.
-- O Docão fica de frente na vitrine. Os botões de jogar continuam à mão, mesmo ao escolher armas ou skins, e o menu se adapta a telas menores.
+- Menu com nova logo, lettering cartoon, moldura irregular de madeira, campos padronizados e carimbo suíno. A chama do título tem animação discreta.
+- Jogar e Juntar a Porcada ficam lado a lado, com menor destaque visual para a ação online.
+- Docão fica sobre uma caixa de armas 3D, com madeira quente, ferragens e inscrição pintada. Trocar Visual é uma mala de figurinos apoiada na quina.
+- O Arsenal abre a tampa e leva a câmera ao interior da caixa, onde as armas aparecem em bandejas de madeira.
+- A mala abre pela lateral e revela um provador com forro verde e prévia 3D do figurino selecionado.
+- Chão e paisagem têm profundidade e paralaxe durante as transições. Fechar ou Esc faz o caminho inverso; a preferência por movimento reduzido pula a viagem.
+- Layout adaptado para telas estreitas, navegação por teclado e foco restaurado ao sair dos menus.
 
 ---
 
@@ -54,8 +29,31 @@ Tudo o que entrou no jogo nesses dois dias (detalhes em cada versão abaixo):
 - **v1.7 · Arsenal do Chiqueiro** ([@rramosjoao](https://github.com/rramosjoao), PR #3): armas novas por categoria, helicóptero Gavião, nuke secreto e mapa Pátio Ferrugem
 - **v1.8 · Míssil Pilotado:** chat e voz, campus HOTMILK, modo Exploração, modo Treino no Estande do Docão, killstreaks no F, míssil pilotado e camuflagens
 - **v1.8.1 · Streak de verdade:** online o míssil, o Gavião e o Fim da chapa matam de verdade, com o servidor no controle
+- **v1.8.2 · Chat no canto** ([@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers), PR #7): chat sempre visível no alto e T para falar com todos
+- **v1.8.3 · Comanda da Fazendinha** ([@hiro-cheers](https://github.com/hiro-cheers), PR #8): menu inicial novo com cenário de fazendinha ao entardecer
+- **v1.8.4 · Agachadinha** ([@felipe-cheers](https://github.com/felipe-cheers), PR #9): Shift agacha com hitbox sincronizada no online, mira só no botão direito e um pulo por toque no Espaço
 
 ---
+
+## v1.8.4 — Agachadinha 🐖 (22/10/2026)
+Feito pelo **[@felipe-cheers](https://github.com/felipe-cheers)** (PR #9).
+- Segure **Shift** (esquerdo ou direito) para agachar, com animação e câmera mais baixa. O Docão anda mais devagar e só levanta se houver espaço acima da cabeça.
+- A mira com zoom agora fica só no **botão direito** do mouse (o Shift virou o agachar).
+- A hitbox acompanha a transição ao agachar e levantar, inclusive nos tiros, golpes de faca e explosões. A postura também é sincronizada no multiplayer, e o servidor confere a troca.
+- Corrigido o pulo que se repetia ao pular, agachar e soltar o agachar no ar. Cada pressão em Espaço agora dispara apenas um pulo.
+
+## v1.8.3 — Comanda da Fazendinha 🌅 (22/10/2026)
+Feito pelo **[@hiro-cheers](https://github.com/hiro-cheers)** (PR #8).
+- Os campos da comanda agora usam etiquetas impressas, papel claro e setas pintadas. Os ajustes de mira ganharam marcadores de tampinha e valores visíveis.
+- A fazendinha do menu agora tem cenário próprio ao entardecer, luz quente no Docão e um palco de madeira. A comanda ganhou acabamento de papel, carimbo suíno, opções lado a lado e placas com ferragens.
+- O menu virou a comanda da fazendinha: papel de açougue, placas de madeira e o botão Jogar. Arsenal e visual são acessados pelas placas junto do Docão; ajustes e áudio ficam no canto superior direito.
+- O Docão fica de frente na vitrine. Os botões de jogar continuam à mão, mesmo ao escolher armas ou skins, e o menu se adapta a telas menores.
+
+## v1.8.2 — Chat no canto 💬 (22/10/2026)
+Feito pelo **[@Janor-Neto-Cheers](https://github.com/Janor-Neto-Cheers)** (PR #7).
+- O histórico do chat fica aberto durante a partida, no canto superior direito, e desce sozinho quando chega mensagem nova
+- **T** abre o chat para todos; **Y** ou **U** abre só para o time na Dominação. O Tab volta a ser só o placar
+- Os botões de voz saíram de cima do feed de abates e foram para o lado do chat
 
 ## v1.8.1 — Streak de verdade 💥 (22/10/2026)
 

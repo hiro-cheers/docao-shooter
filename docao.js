@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { makeWorldSaber } from './saber-view.js';
 import { getSkin } from './skins.js';
 import { mergeVertices } from './vendor/BufferGeometryUtils.js';
+import { crouchAmount, stanceScale } from './shared/stance.js';
 
 const V3 = THREE.Vector3, V2 = THREE.Vector2;
 const TAU = Math.PI * 2;
@@ -469,6 +470,18 @@ export function makeDocao(skinOrId, opts = {}) {
   }
   g.traverse((o) => { if (o.isMesh && !o.userData.isOutline && o.parent === g) o.castShadow = true; });
   return { group: g, legs, arms, guns, head, skin, flashMats: [skinM, faceM, shirtM, snoutM] };
+}
+
+// Pose cartunesca: abaixa o corpo e dobra as pernas, mantendo os cascos no chão.
+// amount é a mesma transição usada pelas hitboxes, inclusive no multiplayer.
+export function setCrouchPose(model, amount) {
+  const c = crouchAmount(amount), bend = c * 0.7;
+  model.group.scale.y = stanceScale(c);
+  model.legs.forEach((leg, i) => {
+    leg.rotation.x += bend;
+    leg.rotation.z = (i === 0 ? -1 : 1) * c * 0.12;
+    leg.position.y = 0.4 + 0.36 * (Math.cos(bend) - 1) + 0.04 * Math.sin(bend);
+  });
 }
 
 export function sleeveColor(shirt) { return shirt.sleeveColor || (shirt.pattern ? shirt.pattern.colors[0] : (shirt.color || '#d8261c')); }

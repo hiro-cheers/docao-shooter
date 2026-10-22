@@ -12,7 +12,8 @@ import { SKINS } from '../../skins.js';
 import { cleanName, uniqueName } from '../../shared/names.js';
 import { KILL_LIMIT, TIME_LIMIT, normTime, RESPAWN_TIME, INVULN, JUMP, SPEED, BOT_SPEED, EYE, WEAPONS, PRIMARIES, BOT_PRIMARIES, SECONDARIES, MELEES, PISTOL, KNIFE, SABER, UZI, P90, NAIL, SEMI, MELEE, W_NADE, NADE, BACON_ITEM, noteHurt, resetRegen, regenStep, BOT_DEFS, BOT_RANGE, TAG_COLORS } from '../../shared/rules.js';
 import { meleeHit, MELEE_KINDS } from '../../shared/melee.js';
-import { mapSolids, createPhysics, raySphere, HITBOXES } from '../../shared/physics.js';
+import { mapSolids, createPhysics, raySphere, rayHitboxes } from '../../shared/physics.js';
+import { stanceScale, stanceHeight, stepCrouch } from '../../shared/stance.js';
 import { explosionHits, rayCapsule, ROCKET_PAD } from '../../shared/combat.js';
 import { streakRewards, PREDATOR, HELI, NUKE, heliOrbit, heliPos } from '../../shared/killstreaks.js';
 import { DOM, pickZone, newZoneState, zoneCounts, stepZone, canJoinTeam, smallerTeam, inZone } from '../../shared/domination.js';
@@ -31,7 +32,7 @@ const norm = (v) => { const l = vlen(v) || 1; return { x: v.x / l, y: v.y / l, z
 const arr3 = (v) => [r2(v.x), r2(v.y), r2(v.z)];
 const obj3 = (a) => (Array.isArray(a) && a.length === 3 && a.every(Number.isFinite) ? { x: a[0], y: a[1], z: a[2] } : null);
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
-const center = (e, y = 1.0, p = e.pos) => ({ x: p.x, y: p.y + y, z: p.z });
+const center = (e, y = 1.0, p = e.pos) => ({ x: p.x, y: p.y + y * stanceScale(e.crouch), z: p.z });
 
 export class Game {
   constructor(cfg, io) {
@@ -116,7 +117,7 @@ export class Game {
     const mel = MELEES.includes(melee) ? melee : KNIFE;
     const e = { id, bot, name: cleanName(name), skin: SKINS.some((s) => s.id === skin) ? skin : pick(SKINS).id, tag: TAG_COLORS[(id - 1) % TAG_COLORS.length],
       primary: prim, nextPrimary: prim, secondary: sec, nextSecondary: sec, melee: mel, nextMelee: mel, slots: [prim, sec, mel], weapon: 0,
-      pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
+      pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, crouch: 0, onGround: true, hp: 100, alive: false, kills: 0, deaths: 0, invulnUntil: 0, respawnAt: 0,
       nades: 0, mag: WEAPONS.map((w) => w.mag), reserve: WEAPONS.map((w) => w.reserve), lastShot: WEAPONS.map(() => -9), lastCt: [], reload: null, hist: [], ping: 0, lastUpd: 0, sq: 0, lastKnock: -9,
       connected: !bot, dcAt: 0, lastAttacker: 0, team: -1, teamPref: -1, caps: 0, voice: 'off' };
     if (bot) Object.assign(e, { think: 0, target: null, aim: 0, reaction: rand(0.35, 0.65), strafeDir: 1, strafeT: 0, wp: null, path: null, stuck: 0, lastSeen: null, lastSeenAt: -99, accuracy: rand(0.045, 0.07), nextNade: 0, nextFire: 0, reloadEnd: 0, repathAt: 0 });
@@ -310,13 +311,16 @@ export class Game {
       const p = obj3(m.p), v = obj3(m.v);
       if (p) {
         const dt = clamp(t - (e.lastUpd || t), 0.016, 1);
+        // Não confia em uma redução instantânea da hitbox enviada pelo cliente.
+        // Clientes antigos omitem c e continuam em pé.
+        stepCrouch(e, m.c, dt, this.P);
         const horiz = Math.hypot(p.x - e.pos.x, p.z - e.pos.z);
         const knocked = this.T - e.lastKnock < 2.5;
         const maxH = (SPEED * 1.35 + (knocked ? 22 : 0)) * dt + 0.6;
         const [hx, hz] = this.map.size;
         const inside = Math.abs(p.x) <= hx && Math.abs(p.z) <= hz && p.y >= -0.5 && p.y < 45;
         if (this.test && m.tp) { e.pos = p; e.lastKnock = this.T; }
-        else if (horiz > maxH || !inside || this.P.overlapping(p.x, p.y, p.z, 0.03) || (p.y - e.pos.y > (knocked ? 12 : 3.2) * Math.max(dt, 0.25) + 1)) {
+        else if (horiz > maxH || !inside || this.P.overlapping(p.x, p.y, p.z, 0.03, stanceHeight(e)) || (p.y - e.pos.y > (knocked ? 12 : 3.2) * Math.max(dt, 0.25) + 1)) {
           e.badMoves = (e.badMoves || 0) + 1; this.toMe(e, ['pos', arr3(e.pos)]); // anti-cheat: devolve pra última posição válida
         } else { e.pos = p; if (v) e.vel = { x: clamp(v.x, -40, 40), y: clamp(v.y, -60, 40), z: clamp(v.z, -40, 40) }; }
         e.lastUpd = t;
@@ -472,7 +476,7 @@ export class Game {
   }
   melee(e, kind, o, d, rewindT = this.T) {
     const targets = [...this.ents.values()].filter((t) => t !== e && t.alive && (t.bot || t.connected) && !this.friends(t, e))
-      .map((t) => ({ e: t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos, yaw: rewindT < this.T ? this.yawAt(t, rewindT) : t.yaw }));
+      .map((t) => ({ e: t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos, yaw: rewindT < this.T ? this.yawAt(t, rewindT) : t.yaw, crouch: this.crouchAt(t, rewindT) }));
     const h = meleeHit(o, d, kind, targets, (a, b) => this.P.losClear(a, b));
     this.events.push(['ml', e.id, MELEE_KINDS.indexOf(kind), h ? 1 : 0]);
     if (h) this.damage(h.e, h.dmg, e, KNIFE, false, h.back);
@@ -498,21 +502,32 @@ export class Game {
     }
   }
   // ---------- histórico de posições (rewind) ----------
-  pushHist(e) { e.hist.push([this.T, e.pos.x, e.pos.y, e.pos.z, e.yaw]); while (e.hist.length > 2 && e.hist[0][0] < this.T - HIST) e.hist.shift(); }
+  pushHist(e) { e.hist.push([this.T, e.pos.x, e.pos.y, e.pos.z, e.yaw, e.crouch]); while (e.hist.length > 2 && e.hist[0][0] < this.T - HIST) e.hist.shift(); }
   posAt(e, t) {
     const h = e.hist; if (!h.length || t >= h[h.length - 1][0]) return e.pos;
     for (let i = h.length - 1; i > 0; i--) if (h[i - 1][0] <= t) { const a = h[i - 1], b = h[i], k = (t - a[0]) / Math.max(1e-6, b[0] - a[0]); return { x: a[1] + (b[1] - a[1]) * k, y: a[2] + (b[2] - a[2]) * k, z: a[3] + (b[3] - a[3]) * k }; }
     return { x: h[0][1], y: h[0][2], z: h[0][3] };
   }
   yawAt(e, t) { const h = e.hist; let y = e.yaw; for (let i = h.length - 1; i >= 0; i--) { y = h[i][4] ?? y; if (h[i][0] <= t) break; } return y; }
+  crouchAt(e, t) {
+    const h = e.hist; if (!h.length || t >= h[h.length - 1][0]) return e.crouch || 0;
+    for (let i = h.length - 1; i > 0; i--) if (h[i - 1][0] <= t) {
+      const a = h[i - 1], b = h[i], k = (t - a[0]) / Math.max(1e-6, b[0] - a[0]);
+      return (a[5] || 0) + ((b[5] || 0) - (a[5] || 0)) * k;
+    }
+    return h[0][5] || 0;
+  }
   // ---------- combate ----------
   hitscan(shooter, o, dirs, w, rewindT = this.T, mul = 1) {
     const W = WEAPONS[w], hits = new Map(), ends = [], heliDmg = new Map(); const heliT = this.T - (shooter.bot ? 0 : clamp(shooter.ping / 1000, 0, 0.4));
     const scale = W.key === 'arco' ? clamp(Number(mul) || 1, 0.35, 1.3) : 1;
-    const targets = [...this.ents.values()].filter((t) => t !== shooter && t.alive && (t.bot || t.connected) && !this.friends(t, shooter)).map((t) => ({ t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos }));
+    const targets = [...this.ents.values()].filter((t) => t !== shooter && t.alive && (t.bot || t.connected) && !this.friends(t, shooter)).map((t) => ({ t, p: rewindT < this.T ? this.posAt(t, rewindT) : t.pos, crouch: this.crouchAt(t, rewindT) }));
     for (const d of dirs) {
       const wall = this.P.rayWorld(o, d, W.range); const wallD = wall ?? W.range; let best = null;
-      for (const { t, p } of targets) for (const [y, r, head] of HITBOXES) { const tt = raySphere(o, d, center(t, y, p), r); if (tt > 0 && tt < wallD && (!best || tt < best.tt)) best = { t, tt, head }; }
+      for (const { t, p, crouch } of targets) {
+        const hit = rayHitboxes(o, d, p, crouch);
+        if (hit && hit.t < wallD && (!best || hit.t < best.tt)) best = { t, tt: hit.t, head: hit.head };
+      }
       let hb = null; // Gavião inimigo na frente (bala para nele). O cliente desenha o Gavião no tempo de jogo (sem atraso de interpolação): vale o ping ou o rewind dos jogadores
       for (const hl of this.helis) { if (!hl.alive || !this.heliFoe(hl, shooter)) continue; const tt = Math.max(raySphere(o, d, this.heliAt(hl, heliT), HELI.hit), raySphere(o, d, this.heliAt(hl, rewindT), HELI.hit)); if (tt > 0.15 && tt < wallD && (!best || tt < best.tt) && (!hb || tt < hb.tt)) hb = { hl, tt }; }
       if (hb) {
@@ -592,7 +607,7 @@ export class Game {
       for (const e of this.ents.values()) {
         if (!e.alive || (!e.bot && !e.connected) || (e === r.owner && this.T - r.born < 0.3)) continue;
         if (this.friends(e, r.owner)) continue;
-        const t = rayCapsule(r.pos, r.dir, step + 0.1, e.pos, ROCKET_PAD); if (t !== null && (hitT === null || t < hitT)) { hitT = t; hitE = e; } // casco do Docão
+        const t = rayCapsule(r.pos, r.dir, step + 0.1, e.pos, ROCKET_PAD, e.crouch); if (t !== null && (hitT === null || t < hitT)) { hitT = t; hitE = e; } // casco do Docão
       }
       if (hitT !== null || this.T - r.born > 6) {
         const t = Math.max(0, (hitT ?? 0) - 0.05); this.rockets.splice(i, 1);
@@ -612,7 +627,7 @@ export class Game {
     return best;
   }
   spawn(e, silent = false) {
-    const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.hp = 100; e.alive = true; resetRegen(e); e.needRs = false; e.rsReq = false; e.invulnUntil = this.T + INVULN; e.sq++;
+    const s = this.pickSpawn(e); e.pos = { ...s }; e.vel = { x: 0, y: 0, z: 0 }; e.crouch = 0; e.hp = 100; e.alive = true; resetRegen(e); e.needRs = false; e.rsReq = false; e.invulnUntil = this.T + INVULN; e.sq++;
     if (e.bot && Math.random() < 0.3) e.nextPrimary = pick(BOT_PRIMARIES);
     e.primary = e.nextPrimary; e.secondary = e.nextSecondary ?? PISTOL; e.melee = e.nextMelee ?? KNIFE; e.slots = [e.primary, e.secondary, e.melee]; e.weapon = e.primary; e.knifeMode = false; e.mag = WEAPONS.map((w) => w.mag); e.reserve = WEAPONS.map((w) => w.reserve); e.reload = null; e.nades = NADE.spawnWith;
     e.yaw = Math.atan2(-s.x, -s.z); e.pitch = 0; // modelo olhando pro centro
@@ -676,7 +691,7 @@ export class Game {
     { const rt = clamp(this.T - (this.lastRegenT ?? this.T), 0, 0.25); this.lastRegenT = this.T; for (const e of this.ents.values()) regenStep(e, this.T, rt); }
     if (this.zone) this.updateZone(TICK_DT(this));
     const snap = { t: 's', T: r2(this.T), d: this.zoneArr() || undefined, e: [...this.ents.values()].filter((e) => e.bot || e.connected).map((e) => [e.id, r2(e.pos.x), r2(e.pos.y), r2(e.pos.z), r2(e.yaw), r2(e.pitch), e.weapon,
-      (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0) | (e.regenOn ? 16 : 0), Math.round(e.hp), e.ping]), ev: this.events };
+      (e.alive ? 1 : 0) | (this.T < e.invulnUntil ? 2 : 0) | (e.onGround ? 4 : 0) | ((e.bot ? e.reloadEnd > this.T : !!e.reload) ? 8 : 0) | (e.regenOn ? 16 : 0), Math.round(e.hp), e.ping, r2(e.crouch)]), ev: this.events };
     this.events = [];
     this.io.broadcast(snap);
     for (const [id, evs] of this.personal) this.io.send(id, { t: 'p', ev: evs }); this.personal.clear();

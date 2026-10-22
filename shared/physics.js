@@ -5,6 +5,7 @@
 //  chão/rampas, movimento, raio contra o mundo (caixas + rampas) e o passo físico do Copo Bomba.
 // ============================================================
 import { GRAV, STEP, RADIUS, HEIGHT, NADE } from './rules.js';
+import { stanceHeight, stanceScale } from './stance.js';
 
 export const WALL_COLLIDE_H = 40;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -68,9 +69,9 @@ export function createPhysics(solids, size) {
   // overlapping(): o corpo cruza alguma caixa que não dá pra subir (topo acima de pés + STEP)?
   const over = (s, x, z, r = RADIUS) => x + r > s.min.x && x - r < s.max.x && z + r > s.min.z && z - r < s.max.z;
   // tol: folga (m) no raio, nos pés e na cabeça — o servidor usa uma folguinha pra validar a posição que o cliente manda
-  function overlapping(x, y, z, tol = 0) {
+  function overlapping(x, y, z, tol = 0, height = HEIGHT) {
     for (const s of solidsAt(x, z)) if (over(s, x, z, RADIUS - tol)) {
-      const top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z)); if (y + tol < top - STEP && y + HEIGHT - tol > s.min.y) return s;
+      const top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z)); if (y + tol < top - STEP && y + height - tol > s.min.y) return s;
     }
     return null;
   }
@@ -84,9 +85,9 @@ export function createPhysics(solids, size) {
     return g;
   }
   // bloqueia se o corpo cruza uma caixa OU se o degrau/rampa levaria a cabeça pra dentro de uma viga, verga de porta ou laje
-  function collides(x, y, z) {
-    if (overlapping(x, y, z)) return true;
-    const g = groundAt(x, z, y, RADIUS); return g > y + 1e-4 && !!overlapping(x, g, z);
+  function collides(x, y, z, height = HEIGHT) {
+    if (overlapping(x, y, z, 0, height)) return true;
+    const g = groundAt(x, z, y, RADIUS); return g > y + 1e-4 && !!overlapping(x, g, z, 0, height);
   }
   function ceilingAt(x, z, headY, r = RADIUS * 0.9) {
     let c = Infinity;
@@ -97,14 +98,15 @@ export function createPhysics(solids, size) {
   // horizontal (ou pra baixo, se a cabeça entrou numa viga e há espaço) que deixa o corpo livre. Até 3 caixas por vez.
   const EPS = 1e-3;
   function depenetrate(e) {
+    const height = stanceHeight(e);
     for (let it = 0; it < 3; it++) {
-      const s = overlapping(e.pos.x, e.pos.y, e.pos.z); if (!s) return true;
+      const s = overlapping(e.pos.x, e.pos.y, e.pos.z, 0, height); if (!s) return true;
       const { x, y, z } = e.pos, top = topAt(s, clamp(x, s.min.x, s.max.x), clamp(z, s.min.z, s.max.z)), c = [
         [s.min.x - RADIUS - EPS - x, 0, 0], [s.max.x + RADIUS + EPS - x, 0, 0],
         [0, 0, s.min.z - RADIUS - EPS - z], [0, 0, s.max.z + RADIUS + EPS - z],
       ].filter((d) => Math.abs(d[0]) + Math.abs(d[2]) <= RADIUS + 0.06); // só empurrão curto: nunca atravessa parede
       if (top - y <= 1) c.push([0, top - y + EPS, 0]); // afundou pouco num degrau/rampa/caixa: sobe nela
-      if (s.min.y > y + STEP && y - (s.min.y - HEIGHT - EPS) <= 0.5) c.push([0, s.min.y - HEIGHT - EPS - y, 0]); // cabeça na viga: desce
+      if (s.min.y > y + STEP && y - (s.min.y - height - EPS) <= 0.5) c.push([0, s.min.y - height - EPS - y, 0]); // cabeça na viga: desce
       c.sort((a, b) => Math.abs(a[0]) + Math.abs(a[1]) + Math.abs(a[2]) - Math.abs(b[0]) - Math.abs(b[1]) - Math.abs(b[2]));
       let ok = false;
       for (const [dx, dy, dz] of c) {
@@ -112,27 +114,28 @@ export function createPhysics(solids, size) {
         if (Math.abs(nx) > hx - RADIUS || Math.abs(nz) > hz - RADIUS) continue;
         const g = groundAt(nx, nz, ny, RADIUS); if (g > ny) ny = g; // degrau/rampa no lugar novo: sobe nele (groundAt só acha até STEP acima)
         if (ny < groundAt(nx, nz, ny, RADIUS) - 1e-4) continue;
-        const o = overlapping(nx, ny, nz); if (o === s) continue;
+        const o = overlapping(nx, ny, nz, 0, height); if (o === s) continue;
         e.pos.x = nx; e.pos.y = ny; e.pos.z = nz; ok = true; if (!o) return true; break; // saiu desta caixa; se caiu em outra, tenta de novo
       }
       if (!ok) return false;
     }
-    return !overlapping(e.pos.x, e.pos.y, e.pos.z);
+    return !overlapping(e.pos.x, e.pos.y, e.pos.z, 0, height);
   }
   const [hx, hz] = size;
   // Movimento (mesmo código no cliente e no servidor): eixo a eixo (x, depois z) = desliza em paredes e quinas;
   // sub-passos ≤ 0,25 m (empurrões fortes não atravessam parede fina); se já estiver dentro de algo, sai primeiro.
   function moveEntity(e, dt) {
+    const height = stanceHeight(e);
     let blocked = false;
     const free = depenetrate(e);
     const dx = e.vel.x * dt, dz = e.vel.z * dt, n = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dz)) / 0.25));
     for (let i = 0; i < n; i++) {
-      const nx = e.pos.x + dx / n; if (!free || !collides(nx, e.pos.y, e.pos.z)) e.pos.x = nx; else { blocked = true; e.vel.x = 0; }
-      const nz = e.pos.z + dz / n; if (!free || !collides(e.pos.x, e.pos.y, nz)) e.pos.z = nz; else { blocked = true; e.vel.z = 0; }
+      const nx = e.pos.x + dx / n; if (!free || !collides(nx, e.pos.y, e.pos.z, height)) e.pos.x = nx; else { blocked = true; e.vel.x = 0; }
+      const nz = e.pos.z + dz / n; if (!free || !collides(e.pos.x, e.pos.y, nz, height)) e.pos.z = nz; else { blocked = true; e.vel.z = 0; }
       if (blocked) break;
     }
     e.vel.y += GRAV * dt; let ny = e.pos.y + e.vel.y * dt;
-    if (e.vel.y > 0) { const c = ceilingAt(e.pos.x, e.pos.z, e.pos.y + HEIGHT, RADIUS); if (ny + HEIGHT > c) { ny = Math.max(e.pos.y, c - HEIGHT); e.vel.y = 0; e.bonk = true; } }
+    if (e.vel.y > 0) { const c = ceilingAt(e.pos.x, e.pos.z, e.pos.y + height, RADIUS); if (ny + height > c) { ny = Math.max(e.pos.y, c - height); e.vel.y = 0; e.bonk = true; } }
     const g = groundAt(e.pos.x, e.pos.z, e.pos.y, RADIUS);
     if (ny <= g) { e.pos.y = g; e.vel.y = 0; e.onGround = true; }
     else if (e.onGround && e.vel.y <= 0 && ny - g < STEP) { e.pos.y = g; e.vel.y = 0; }
@@ -194,3 +197,18 @@ export function raySphere(o, d, c, r) {
 }
 // esferas de acerto do Docão (iguais ao cliente): cabeça e corpo, relativas aos pés
 export const HITBOXES = [[1.5, 0.5, true], [0.8, 0.58, false]];
+
+// O mesmo achatamento vertical da animação: elipsoides, sem estreitar o corpo.
+export function rayHitboxes(o, d, pos, crouch = 0) {
+  const scale = stanceScale(crouch);
+  const origin = { x: o.x, y: pos.y + (o.y - pos.y) / scale, z: o.z };
+  const length = Math.hypot(d.x, d.y / scale, d.z);
+  if (length < 1e-9) return null;
+  const dir = { x: d.x / length, y: d.y / scale / length, z: d.z / length };
+  let best = null;
+  for (const [y, r, head] of HITBOXES) {
+    const t = raySphere(origin, dir, { x: pos.x, y: pos.y + y, z: pos.z }, r) / length;
+    if (t > 0 && (!best || t < best.t)) best = { t, head };
+  }
+  return best;
+}

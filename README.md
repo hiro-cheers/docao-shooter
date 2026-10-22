@@ -79,8 +79,9 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 | **W A S D** (ou setas) | andar |
 | **Mouse** | mirar |
 | **Espaço** | pular |
+| **Shift** (segurar, esquerdo ou direito) | agachar: câmera e corpo abaixam, anda mais devagar; só levanta quando há espaço |
 | **Clique esquerdo** | atirar · golpe da faca · corte do sabre · segurar = puxar a corda do arco |
-| **Botão direito** ou **Shift** | mirar com zoom (luneta nas snipers) · **com a faca na mão: estocada** |
+| **Botão direito** | mirar com zoom (luneta nas snipers) · **com a faca na mão: estocada** |
 | **R** | recarregar |
 | **1** / **2** / **3** | primária / secundária / corpo a corpo |
 | **Rodinha do mouse** | gira entre as três armas |
@@ -103,10 +104,9 @@ O nome, a skin, as armas, o mapa, o modo e a sensibilidade ficam salvos no naveg
 
 | Tecla | O que faz |
 |---|---|
-| **Y** | abre o chat para **todos** |
-| **U** | abre o chat do **time** (na Dominação) |
-| **Enter** | abre o chat para todos |
-| **Tab** (com o chat aberto) | troca entre todos e time |
+| **T** | abre o chat para **todos** |
+| **Y** / **U** | abre o chat do **time** (na Dominação) |
+| **Enter** | abre o chat (com o Docão vivo) |
 | **Esc** | fecha o chat |
 | **J** | troca a voz: Mudo → Todos → Time |
 | **K** (segurar) | fala no microfone (push-to-talk) |
@@ -410,6 +410,7 @@ Os testes de navegador usam **Playwright** em modo headless, e vários deles sal
 | Sem navegador | Offline (navegador) | Online (precisa do `wrangler dev`) |
 |---|---|---|
 | `test-shared.mjs`: regras compartilhadas | `test.mjs`: fluxo geral | `test-online.mjs` |
+| `test-crouch.mjs`: postura, colisão, hitboxes e histórico online | `test-crouch-browser.mjs`: Shift, câmera e animação | |
 | `test-map-audit.mjs`: auditoria dos mapas + partida simulada | `test-maps.mjs`: mapas, escadas e telhados | `test-online-dom.mjs` |
 | `test-social.mjs`: protocolo do chat e da voz | `test-dom.mjs`: Dominação | `test-online-idle.mjs` |
 | `test-chat-voice.mjs`: chat e voz numa sala falsa | `test-streaks.mjs`: granadas e killstreaks | `test-online-names.mjs` |
